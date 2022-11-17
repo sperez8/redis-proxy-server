@@ -1,0 +1,10 @@
+# This is the conda environment file for all dependencies
+name: proxy-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.4
+  - redis=5.0.3
+  - redis-py=4.3.4
+  - flask=2.1.3

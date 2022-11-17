@@ -1,0 +1,17 @@
+version: '3'
+services:
+    redis:
+        image: redis:7.0.5
+        # volumes:
+        #     - ./config/redis.conf:/redis.conf
+        # command: [ "redis-server", "/redis.conf" ]
+    web:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+         - "5000:5000"
+        volumes:
+         - .:/src
+        depends_on:
+         - redis

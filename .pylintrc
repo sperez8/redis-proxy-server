@@ -1,0 +1,5 @@
+[MASTER]
+jobs=0
+ignore=debug
+
+[MESSAGES CONTROL]
