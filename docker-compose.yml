@@ -2,16 +2,22 @@ version: '3'
 services:
     redis:
         image: redis:7.0.5
-        # volumes:
-        #     - ./config/redis.conf:/redis.conf
-        # command: [ "redis-server", "/redis.conf" ]
-    web:
+        command: --port ${REDIS_PORT}
+        ports:
+          - ${REDIS_PORT}:${REDIS_PORT}
+    proxy:
         build:
             context: .
             dockerfile: Dockerfile
+        environment:
+          - REDIS_PORT=${REDIS_PORT}
+          - REDIS_HOST=${REDIS_HOST}
+          - PROXY_LISTEN=${PROXY_LISTEN}
+          - CACHE_EXPIRY=${CACHE_EXPIRY}
+          - CACHE_CAPACITY=${CACHE_CAPACITY}
         ports:
-         - "5000:5000"
+         - ${PROXY_PORT}:${PROXY_PORT}
         volumes:
-         - .:/src
+         - .:/proxy
         depends_on:
          - redis
