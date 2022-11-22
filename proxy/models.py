@@ -7,7 +7,7 @@ from redis import Redis
 
 
 def make_cache(
-    redis: Redis, capacity: int, expiry: int, debug: bool = True
+    redis: Redis, capacity: int, expiry: int, debug: bool
 ) -> Callable:
     """Builds the function to call the cache"""
 
@@ -16,10 +16,11 @@ def make_cache(
         """An LRU and TTL cached method that queries a redis database."""
         if debug:
             # When debugging, we artificially make the query take a long time to test the cache
-            # TODO: this is great for manually testing the cache but we'll eventually remove this
-            #  to do something more sophisticated
+            # TODO: this is great for manually testing the cache
+            #  but perhaps we can do something more sophisticated in our end-to-end tests?
             time.sleep(2)
 
+        # TODO: user logger
         print(f"Querying redis with '{key}'", flush=True)
         return redis.get(key)
 

@@ -1,4 +1,4 @@
-# All the configurable parameters are in the file '.config'
+# All configurable parameters are in the file '.config'
 include .config
 export
 
@@ -15,7 +15,7 @@ run:
 # Build proxy server then run all tests
 test: build
 	docker-compose up
-	# TODO: call integration tests here
+	# TODO: call integration tests here!!
 
 logs:
 	docker-compose logs

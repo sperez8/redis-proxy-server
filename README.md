@@ -61,6 +61,7 @@ All parameters are configurable from the file `.config`. This includes:
 - the host and container **ports** that will be mapped for the proxy server: `HOST_PORT` and `CONTAINER_PORT`,
 - the **cache expiry time**: `CACHE_EXPIRY`
 - the **cache capacity** (i.e. number of keys): `CACHE_CAPACITY`
+- to run in debug mode, set `DEBUG_PROXY` to `True`
 
 ## Architecture
 
@@ -121,7 +122,7 @@ Here are the time complexity of different operations:
 
 Here are the next steps:
 
-* Add logging
+* Add logging and dev tools (black, pylint, mypy) in a dev environment
 * Implement end-to-end tests using `pytest` and move the setting of redis keys to the test setup
 * Implement parallel concurrent processing with multiple clients
 * Add number of allowed clients as a configurable parameter in `.config`

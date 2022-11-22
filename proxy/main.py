@@ -13,17 +13,19 @@ if __name__ == "__main__":
     proxy_listen = os.getenv("PROXY_LISTEN")
     capacity = int(os.getenv("CACHE_CAPACITY"))
     expiry = int(os.getenv("CACHE_EXPIRY"))
-    print(redis_port, redis_host, proxy_listen, capacity, expiry)
+    debug = bool(os.getenv("DEBUG_PROXY"))
+
+    # TODO: add logging here to report the configurations of the proxy server
 
     # Connect to redis database and fill it
-    # TODO: only connect to redis here. Fill redis in tests, not web app
+    # TODO: only connect to redis here. Fill redis with keys in tests, not web app
     redis_connection: Redis = load_redis(host=redis_host, port=redis_port)
 
     # Build the caching function
     query_cached_redis: Callable = make_cache(
-        redis=redis_connection, capacity=capacity, expiry=expiry, debug=True
+        redis=redis_connection, capacity=capacity, expiry=expiry, debug=debug
     )
 
     # Create and run flask app
     proxy = create_app(query_func=query_cached_redis)
-    proxy.run(host=proxy_listen, debug=True)
+    proxy.run(host=proxy_listen, debug=debug)

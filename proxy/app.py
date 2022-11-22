@@ -14,10 +14,10 @@ def create_app(query_func: Callable):
         return (
             "Welcome to the Redis Proxy Server. "
             "You can query the redis database using a key using an URL in the form of: "
-            "'home/query?key={the_key_you_are_interested_in}'"
+            "'hostname/query?key={the_key_you_are_interested_in}'"
         )
 
-    @app.route("/query")
+    @app.route("/query", methods=['GET'])
     def query():
         """Page for querying the cached redis database using GET methods only."""
         key = request.args.get("key")
