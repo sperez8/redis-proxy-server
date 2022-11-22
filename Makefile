@@ -17,6 +17,8 @@ test: build
 	docker-compose up
 	# TODO: call integration tests here
 
+logs:
+	docker-compose logs
 # Closes app
 exit:
 	@echo Shutting down proxy server

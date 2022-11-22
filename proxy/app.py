@@ -1,9 +1,10 @@
 """All methods related to the flask app."""
+from typing import Callable
 
 from flask import Flask, request
 
 
-def create_app(redis):
+def create_app(query_func: Callable):
     """Method for creating the flask app given parameters."""
     app = Flask(__name__)
 
@@ -18,8 +19,8 @@ def create_app(redis):
 
     @app.route("/query")
     def query():
-        """Page for querying the redis database using GET methods only."""
+        """Page for querying the cached redis database using GET methods only."""
         key = request.args.get("key")
-        return redis.get(key)
+        return query_func(key)
 
     return app
