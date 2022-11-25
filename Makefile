@@ -2,24 +2,25 @@
 include .config
 export
 
-# Build proxy server and redis instance
 build:
-	@echo Building proxy server docker
+	@echo Building proxy server and test containers
 	docker-compose build
 
-# Run all tests
-run:
-	@echo Running the proxy server only
+run_proxy:
+	@echo Builing and running the proxy server only
+	docker-compose build proxy
 	docker-compose up proxy
 
-# Build proxy server then run all tests
 test: build
+	@echo Running proxy server and integration tests
 	docker-compose up
-	# TODO: call integration tests here!!
 
 logs:
 	docker-compose logs
-# Closes app
+
+ps:
+	docker-compose ps
+
 exit:
-	@echo Shutting down proxy server
+	@echo Shutting down containers
 	docker-compose stop

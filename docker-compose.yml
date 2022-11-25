@@ -8,7 +8,7 @@ services:
     proxy:
         build:
             context: .
-            dockerfile: Dockerfile
+            dockerfile: proxy/Dockerfile
         environment:
           - REDIS_PORT=${REDIS_PORT}
           - REDIS_HOST=${REDIS_HOST}
@@ -16,8 +16,23 @@ services:
           - CACHE_EXPIRY=${CACHE_EXPIRY}
           - CACHE_CAPACITY=${CACHE_CAPACITY}
         ports:
-         - ${PROXY_PORT}:${PROXY_PORT}
+          - ${PROXY_PORT}:${PROXY_PORT}
         volumes:
-         - .:/proxy
+          - .:/proxy
         depends_on:
-         - redis
+          - redis
+    integration_tests:
+        build:
+          context: .
+          dockerfile: test/Dockerfile
+        environment:
+          - REDIS_PORT=${REDIS_PORT}
+          - REDIS_HOST=${REDIS_HOST}
+          - PROXY_PORT=${PROXY_PORT}
+          - CACHE_EXPIRY=${CACHE_EXPIRY}
+          - CACHE_CAPACITY=${CACHE_CAPACITY}
+        volumes:
+          - .:/test
+        depends_on:
+          - proxy
+          - redis

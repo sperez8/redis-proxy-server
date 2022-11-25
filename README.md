@@ -14,13 +14,13 @@ To make a query, using the following URL:
 http://{hostname}:{port}/query?key={key_you_are_interested_in}
 ```
 
-when testing locally:
+when testing locally, the request:
 
 ```bash
 http://localhost:5000/query?key=Batman
 ```
 
-return `Superhero`.
+returns `Superhero`.
 
 ## Installation and running tests
 
@@ -38,12 +38,12 @@ make test
 
 ## Other commands
 
-Build or rebuild the app:
+Build or rebuild the server and integration test containers:
 ```bash
 make build
 ```
 
-Run only the proxy server:
+Build and run only the proxy server (for use in production):
 ```bash
 make run
 ```
@@ -61,7 +61,6 @@ All parameters are configurable from the file `.config`. This includes:
 - the host and container **ports** that will be mapped for the proxy server: `HOST_PORT` and `CONTAINER_PORT`,
 - the **cache expiry time**: `CACHE_EXPIRY`
 - the **cache capacity** (i.e. number of keys): `CACHE_CAPACITY`
-- to run in debug mode, set `DEBUG_PROXY` to `True`
 
 ## Architecture
 
@@ -71,15 +70,18 @@ The folder structure is as follows:
 
     .
     ├── proxy                   # all proxy server related files
+    │   ├── Dockerfile              # Container for the proxy server
     │   ├── main.py                 # Runs the web app
     │   ├── models.py               # All methods relating to caching/querying the redis database
-    │   └── app.py                  # Instantiates the flask app
+    │   └── app.py                  # Methods related to the flask app
     ├── test                    # End-to-end tests
-    │   ├── *.py                    # FILL ME
-    ├── docker-compose.yml      # Defines how to connect the two services: the proxy server and redis instance
-    ├── Dockerfile              # Container for the proxy server
+    │   ├── Dockerfile              # Container for the integration tests
+    │   ├── conftest.py             # pytest fixtures used for setting up a testable redis instance and making server requests
+    │   ├── test_cache.py           # All tests associated with configurable cache 
+    ├── docker-compose.yml      # Defines services: the proxy server, redis image and integration tests
     ├── .config                 # File where all configurable parameters can be updated
     ├── environment.yml         # Conda environment for proxy server
+    ├── environment.dev.yml     # Additional conda dependencies for development and testing only
     ├── Makefile
     └── README.md
 
@@ -122,8 +124,8 @@ Here are the time complexity of different operations:
 
 Here are the next steps:
 
-* Add logging and dev tools (black, pylint, mypy) in a dev environment
-* Implement end-to-end tests using `pytest` and move the setting of redis keys to the test setup
+* Make tests independent (so they can run in any order and in parallel)
+  * to do so, ideally the integration tests can make a call to the proxy server to clear the cache between tests
 * Implement parallel concurrent processing with multiple clients
 * Add number of allowed clients as a configurable parameter in `.config`
 
