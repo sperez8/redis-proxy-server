@@ -3,7 +3,7 @@ import os
 from typing import Callable
 
 from app import create_app
-from models import load_redis, make_cache
+from models import make_cache
 from redis import Redis
 
 if __name__ == "__main__":
@@ -15,11 +15,8 @@ if __name__ == "__main__":
     expiry = int(os.getenv("CACHE_EXPIRY"))
     debug = bool(os.getenv("DEBUG_PROXY"))
 
-    # TODO: add logging here to report the configurations of the proxy server
-
-    # Connect to redis database and fill it
-    # TODO: only connect to redis here. Fill redis with keys in tests, not web app
-    redis_connection: Redis = load_redis(host=redis_host, port=redis_port)
+    # Connect to redis database
+    redis_connection = Redis(host=redis_host, port=redis_port)
 
     # Build the caching function
     query_cached_redis: Callable = make_cache(
