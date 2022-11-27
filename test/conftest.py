@@ -5,6 +5,7 @@ import pytest
 import requests
 from redis import Redis
 
+
 @pytest.fixture(scope="session", autouse=True)
 def data():
     """The key-value pairs we want to insert into the redis database."""
@@ -17,6 +18,7 @@ def data():
         "Clara Hughes": "Olympian",
         "Fiona Staples": "Comic Artist",
     }
+
 
 @pytest.fixture(scope="session")
 def capacity(data):
@@ -44,7 +46,7 @@ def expiry():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def redis(data, capacity, expiry):
+def redis(data):
     """Define the fixture for the redis instance and fill it with test data."""
     # Connect to the redis instance
     redis_port = os.getenv("REDIS_PORT")

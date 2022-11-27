@@ -15,7 +15,7 @@ def test_cached_key(redis, proxy_get, data):
     hits_after = redis.info()["keyspace_hits"]
 
     # We should have made one GET to Redis
-    assert hits_before + 1 == hits_after
+    assert hits_after - hits_before == 1
     assert value == data[key]
 
     # Now if we request the key again
@@ -42,7 +42,7 @@ def test_expiry_eviction(redis, proxy_get, expiry):
     hits_after = redis.info()["keyspace_hits"]
 
     # We should have another GET to Redis since the key was evicted
-    assert hits_before + 1 == hits_after
+    assert hits_after - hits_before == 1
 
     # But its TTL is updated and it is back in the cache now
     hits_before2 = redis.info()["keyspace_hits"]
@@ -71,7 +71,7 @@ def test_capacity_eviction(redis, proxy_get, data, capacity):
     hits_after = redis.info()["keyspace_hits"]
 
     # We should have made one GET to Redis since it was evicted from the cache
-    assert hits_before + 1 == hits_after
+    assert hits_after - hits_before == 1
 
     # But it is back at the top of the LRU cache now
     hits_before2 = redis.info()["keyspace_hits"]

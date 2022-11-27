@@ -4,7 +4,7 @@ from typing import Callable
 from flask import Flask, request
 
 
-def create_app(query_func: Callable):
+def create_app(query_func: Callable, lock):
     """Method for creating the flask app given parameters."""
     app = Flask(__name__)
 
@@ -21,6 +21,7 @@ def create_app(query_func: Callable):
     def query():
         """Page for querying the cached redis database using GET methods only."""
         key = request.args.get("key")
-        return query_func(key)
+        with lock:
+            return query_func(key)
 
     return app
