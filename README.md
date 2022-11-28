@@ -5,8 +5,9 @@ Access a redis database using a cached proxy server implemented using Flask.
 ## Summary
 
 The purpose of this repository is to play with concurrency and caching in the context of a web app.
-The proxy server offers caching abilities on top of a redis database. 
-In particular the cache evicts the last recently used key given a configurable capacity and keeps keys cached for a configurable expiry time.
+The proxy server offers caching abilities on top of a redis database.
+Multiple parallel concurrent requests can be made to the cache (see [Architecture](#architecture) for more details).
+In particular, the cache evicts the last recently used key given a configurable capacity and keeps keys cached for a configurable expiry time.
 
 To make a query, using the following URL:
 
@@ -78,6 +79,7 @@ The folder structure is as follows:
     │   ├── Dockerfile              # Container for the integration tests
     │   ├── conftest.py             # pytest fixtures used for setting up a testable redis instance and making server requests
     │   ├── test_cache.py           # All tests associated with configurable cache 
+    │   ├── test_concurency.py      # All tests associated with the concurrency of the app
     ├── docker-compose.yml      # Defines services: the proxy server, redis image and integration tests
     ├── .config                 # File where all configurable parameters can be updated
     ├── environment.yml         # Conda environment for proxy server
@@ -86,9 +88,8 @@ The folder structure is as follows:
     └── README.md
 
 The proxy server uses a barebones Flask app given that it's a simple and lightweight framework. Given specific production requirements, a more sophisticated framework could be used.
-The implementation separates the two concerns (app and cache) and thus swapping for a different framework should be fairly simple.
-
-**TBD**: It is possible that using Flask will hamper the task of limiting the number concurrent clients.
+The implementation separates the two concerns (app and cache) and thus swapping for a different framework (or a different database) 
+should be fairly simple.
 
 The only argument to pass to the app is a method for querying the cache which the function `make_cache()` generates.
 Specifically, this method returns a callable function given the cache capacity and expiry parameters using the `cachetools` decorator `TTLCache`.
@@ -99,8 +100,39 @@ In the case where a cached key expires, it is not immediately removed from the c
 
 While evicting the key immediately could be implemented, it is assumed the added complexity isn't worth it since we already budgeted for a certain capacity.
 
-**TBD**: It is possible that using the `cachetools` decorator will hamper any concurrency we want to implement.
-In fact the documentation specifically mentions that the library is not threadsafe.
+## Concurrency Implementation
+
+Multiple parallel concurrent requests can be made to the cache. When a client request is made for a key not already in the cache, a *threading.lock* is used to prevent
+all other requests from accessing the cache until this first request is complete. This implementation is to ensure that, given two simultaneous requests for the same key, only one queries redis directly.
+Requests for keys already in the cache do not use the lock, only they wait for the lock to be unlocked if that's not already the case.
+
+Given the desire for even more parallelism, we could instead implement a lock on each key in the cache such that all requests to the cache can be processed simultaneously if they are for different keys.
+
+Such an implementation would follow the following pseudocode. First, we would need a means to track all key-lock pairs:
+
+```python
+# A dict for all the key-lock pairs
+master_lock = {}
+
+# We need a lock for accessing the master_lock
+mlock = threading.Lock()
+```
+
+When a request is made for key, we add a lock for that key if one doesn't already exist 
+```python
+with mlock:
+    master_lock.set_default(k, threading.Lock())
+```
+Then we use that lock to make our request
+```python
+with master_lock[k]:
+    query_cache(key)
+```
+
+Note that this hash map of key-lock pairs could grow quite big though we could easily limit it by defining it within our cache and eliminating key-lock pairs when those keys are evicted from our cache.
+
+While this implementation is more parallel, it comes at the expense of higher memory usage. 
+Given a cache of N keys, the total memory required is O(N) for the cache and O(N) for the key-lock hash for a total of O(2N). 
 
 ### Assumptions
 1. Using `cachetools`, a known and widely used open source library, is appropriate for production and tradeoffs convenience for control
@@ -120,12 +152,15 @@ Here are the time complexity of different operations:
 * Scanning for all expired keys and evicting them takes `O(N)` where `N` is the capacity of the cache
 * Evicting a key given the LRU capacity takes `O(1)` since the keys are ordered. This operation is equivalent to removing the last item in a linked list
 
-## In progress
+## Possible improvements
 
-Here are the next steps:
-
-* Make tests independent (so they can run in any order and in parallel)
-  * to do so, ideally the integration tests can make a call to the proxy server to clear the cache between tests
-* Implement parallel concurrent processing with multiple clients
+* Make tests independent (so they can run in any order and calling the same keys)
+  * to do so, the cache would need to be cleared between tests (perhaps with a new endpoint to the proxy server) using a *tear_down()* function
 * Add number of allowed clients as a configurable parameter in `.config`
 
+## Resources
+* https://github.com/Wyntuition/try-python-flask-redis-docker-compose
+* https://lucianomolinari.com/2018/05/02/automating-integration-tests-with-docker-compose-and-makefile/
+* https://github.com/tkem/cachetools
+* https://stackoverflow.com/questions/59931553/how-can-another-python-thread-wait-until-a-lock-is-released
+* https://noamkremen.github.io/a-simple-threadsafe-caching-decorator.html

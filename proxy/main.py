@@ -23,9 +23,9 @@ if __name__ == "__main__":
 
     # Build the caching function
     query_cached_redis: Callable = make_cache(
-        redis=redis_connection, capacity=capacity, expiry=expiry
+        redis=redis_connection, capacity=capacity, expiry=expiry, lock=lock
     )
 
     # Create and run flask app
-    proxy = create_app(query_func=query_cached_redis, lock=lock)
+    proxy = create_app(query_db=query_cached_redis, lock=lock)
     proxy.run(host=proxy_listen)
