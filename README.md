@@ -1,6 +1,6 @@
 # Redis Proxy Server
 
-Access a redis database using a cached proxy server implemented using Flask.
+Access a redis database using a cached proxy server run by Flask and Gunicorn.
 
 ## Summary
 
@@ -37,7 +37,7 @@ cd redis-proxy-server
 make test
 ```
 
-## Other commands
+### Other commands
 
 Build or rebuild the server and integration test containers:
 ```bash
@@ -54,7 +54,7 @@ Close the app with:
 make exit
 ```
 
-## Configurable options
+### Configurables
 
 All parameters are configurable from the file `.config`. This includes:
 - the **Redis backing address hostname and port**: `REDIS_HOST` and `REDIS_PORT`,
@@ -87,7 +87,7 @@ The folder structure is as follows:
     ├── Makefile
     └── README.md
 
-The proxy server uses a barebones Flask app given that it's a simple and lightweight framework. Given specific production requirements, a more sophisticated framework could be used.
+The proxy server uses a barebones Flask framework given that it's a simple and lightweight framework. Given specific production requirements, a more sophisticated framework could be used.
 The implementation separates the two concerns (app and cache) and thus swapping for a different framework (or a different database) 
 should be fairly simple.
 
@@ -100,13 +100,19 @@ In the case where a cached key expires, it is not immediately removed from the c
 
 While evicting the key immediately could be implemented, it is assumed the added complexity isn't worth it since we already budgeted for a certain capacity.
 
+### Assumptions
+1. Using `cachetools`, a known and widely used open source library, is appropriate for production and tradeoffs convenience for control
+2. Given that Redis can accept all sorts of characters in its keys, it is possible that a more rigorous HTTP routing format be necessary to accommodate all possible keys. However this was not the focus of this exercise.
+3. Having all configurable parameters (both networking and cache specs) in the same file is convenient. In practice, particularly as more configurable parameters are added, we may want to separate our concerns (networking vs. proxy specs) in different files
+
 ## Concurrency Implementation
 
 Multiple parallel concurrent requests can be made to the cache. When a client request is made for a key not already in the cache, a *threading.lock* is used to prevent
-all other requests from accessing the cache until this first request is complete. This implementation is to ensure that, given two simultaneous requests for the same key, only one queries redis directly.
-Requests for keys already in the cache do not use the lock, only they wait for the lock to be unlocked if that's not already the case.
+all other requests from accessing the cache until this first request is complete. This implementation is to ensure that, given two simultaneous requests for the same key, only one queries the Redis database directly. This way, the number of calls to the database are minimized.
 
-Given the desire for even more parallelism, we could instead implement a lock on each key in the cache such that all requests to the cache can be processed simultaneously if they are for different keys.
+Requests for keys already in the cache do not require the lock, only they wait for the lock to be unlocked if that's not already the case.
+
+Given the desire for even more parallelism, we could instead implement one lock per key in the cache such that all requests to the cache can be processed simultaneously if they are for different keys.
 
 Such an implementation would follow the following pseudocode. First, we would need a means to track all key-lock pairs:
 
@@ -121,46 +127,44 @@ mlock = threading.Lock()
 When a request is made for key, we add a lock for that key if one doesn't already exist 
 ```python
 with mlock:
-    master_lock.set_default(k, threading.Lock())
+    l = master_lock.set_default(k, threading.Lock())
 ```
 Then we use that lock to make our request
 ```python
-with master_lock[k]:
+with l:
     query_cache(key)
 ```
 
-Note that this hash map of key-lock pairs could grow quite big though we could easily limit it by defining it within our cache and eliminating key-lock pairs when those keys are evicted from our cache.
+Note that this hash map of key-lock pairs could grow quite big though we could easily limit to the size of our cache (for example by defining it within our cache and eliminating key-lock pairs when those keys are evicted from our cache).
 
-While this implementation is more parallel, it comes at the expense of higher memory usage. 
+While this implementation enables more operations to be run in parallel, it comes at the expense of higher memory usage. 
 Given a cache of N keys, the total memory required is O(N) for the cache and O(N) for the key-lock hash for a total of O(2N). 
-
-### Assumptions
-1. Using `cachetools`, a known and widely used open source library, is appropriate for production and tradeoffs convenience for control
-2. Given that Redis can accept all sorts of characters in its keys, it is possible that a more rigorous HTTP routing format be necessary to accommodate all possible keys. Since this wasn't the focus app the assignment, I did not spend time testing this implementation decision
-3. Having all configurable parameters (both networking and cache specs) in the same file is convenient. In practice, particularly as more configurable parameters are added, we may want to separate our concerns (networking vs. proxy specs) in different files
 
 ## Complexity of cache operations
 
-The sole purpose of a cache is to tradeoff heavy memory usage for faster operations.
+In terms of efficiency, the purpose of a cache is to tradeoff increased memory for faster operations.
 The memory of the LRU-TTL cache scales with `O(N)` where `N` is the capacity of the cache set by the user.
 
 Here are the time complexity of different operations:
 * Checking if a key is in the cache behaves like a search on a hash map: it takes `O(1)` in the best case, and `O(N)` in the worst case for large caches 
-* Adding a key to the collection of recently used keys takes `O(1)` since it's akin to adding a pointer to the next item in a linked list
-* Accessing a value for a cached key `O(1)` 
-* Checking the time_to_live of a key takes `O(1)`
+* Adding a new key to the collection of recently used keys takes `O(1)` time since it's akin to adding a pointer to the next item in a linked list
+* Looking up a value for a cached key takes `O(1)` time
+* Checking the time_to_live of a key takes `O(1)` time
 * Scanning for all expired keys and evicting them takes `O(N)` where `N` is the capacity of the cache
 * Evicting a key given the LRU capacity takes `O(1)` since the keys are ordered. This operation is equivalent to removing the last item in a linked list
 
-## Possible improvements
+### Possible improvements
 
-* Make tests independent (so they can run in any order and calling the same keys)
-  * to do so, the cache would need to be cleared between tests (perhaps with a new endpoint to the proxy server) using a *tear_down()* function
-* Add number of allowed clients as a configurable parameter in `.config`
+* Make tests independent (so they can run in any order and call the same keys)
+  * to do so, the cache would need to be cleared between tests (perhaps with a request to a new endpoint to the proxy server) using a *tear_down()* method
+* Add the number of allowed clients as a configurable parameter in `.config`
+* Add more realistic test data (particularly that test the range of possible key-values accepted by Redis)
 
-## Resources
+### Resources
+
 * https://github.com/Wyntuition/try-python-flask-redis-docker-compose
 * https://lucianomolinari.com/2018/05/02/automating-integration-tests-with-docker-compose-and-makefile/
 * https://github.com/tkem/cachetools
 * https://stackoverflow.com/questions/59931553/how-can-another-python-thread-wait-until-a-lock-is-released
 * https://noamkremen.github.io/a-simple-threadsafe-caching-decorator.html
+* https://docs.gunicorn.org/en/stable/run.html

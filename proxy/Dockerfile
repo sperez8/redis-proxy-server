@@ -12,5 +12,5 @@ SHELL ["conda", "run", "-n", "proxy-env", "/bin/bash", "-c"]
 # The code to run when container is started:
 COPY proxy/ ./
 ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "proxy-env", "python", "main.py"]
-CMD python app/main.py
+#CMD python app/main.py
 

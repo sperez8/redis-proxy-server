@@ -15,12 +15,15 @@ services:
           - PROXY_LISTEN=${PROXY_LISTEN}
           - CACHE_EXPIRY=${CACHE_EXPIRY}
           - CACHE_CAPACITY=${CACHE_CAPACITY}
+          - MAX_WORKER=${MAX_WORKER}
         ports:
           - ${PROXY_PORT}:${PROXY_PORT}
         volumes:
           - .:/proxy
         depends_on:
           - redis
+        command:
+          - gunicorn --bind ${PROXY_LISTEN}:${PROXY_PORT}  --workers=${MAX_WORKER} main:proxy
     integration_tests:
         build:
           context: .
